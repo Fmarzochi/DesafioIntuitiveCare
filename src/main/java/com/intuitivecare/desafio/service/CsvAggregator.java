@@ -64,7 +64,6 @@ public class CsvAggregator {
                      .build())) {
 
             // Item 2.3: Ordenar por Valor Total (Maior para Menor)
-            // Usamos Streams do Java para ordenar a lista de mapas
             List<Map.Entry<String, List<BigDecimal>>> listaOrdenada = dados.entrySet().stream()
                     .sorted((e1, e2) -> {
                         BigDecimal total1 = e1.getValue().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
