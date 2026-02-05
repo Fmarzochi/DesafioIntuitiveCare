@@ -1,59 +1,63 @@
 <template>
-  <div>
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Operadoras de Saúde</h2>
-      <router-link to="/dashboard" class="btn btn-primary">Ver Dashboard Financeiro</router-link>
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <h2 class="text-primary fw-bold">Operadoras de Saúde</h2>
+      <router-link to="/dashboard" class="btn btn-primary shadow-sm">
+        📊 Ver Dashboard Financeiro
+      </router-link>
     </div>
 
-    <div class="row mb-3">
-      <div class="col-md-6">
-        <div class="input-group">
+    <div class="card shadow-sm mb-4 border-0">
+      <div class="card-body">
+        <form @submit.prevent="pesquisar" class="d-flex gap-2">
           <input
-            v-model="search"
-            @keyup.enter="handleSearch"
+            v-model="termoBusca"
             type="text"
             class="form-control"
-            placeholder="Buscar por Razão Social..."
+            placeholder="Digite o nome, registro ANS ou CNPJ..."
           />
-          <button @click="handleSearch" class="btn btn-outline-secondary" type="button">Buscar</button>
-        </div>
+          <button type="submit" class="btn btn-dark px-4">
+            🔍 Buscar
+          </button>
+        </form>
       </div>
     </div>
 
-    <div class="table-responsive card shadow-sm p-3">
-      <table class="table table-hover">
-        <thead class="table-light">
-          <tr>
-            <th>Registro ANS</th>
-            <th>CNPJ</th>
-            <th>Razão Social</th>
-            <th>Modalidade</th>
-            <th>UF</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="5" class="text-center py-4">
-              <div class="spinner-border text-primary" role="status"></div>
-            </td>
-          </tr>
-          <tr v-for="op in operadoras" :key="op.registroAns" v-else>
-            <td>{{ op.registroAns }}</td>
-            <td>{{ op.cnpj }}</td>
-            <td>{{ op.razaoSocial }}</td>
-            <td>{{ op.modalidade }}</td>
-            <td>{{ op.uf }}</td>
-          </tr>
-          <tr v-if="!loading && operadoras.length === 0">
-            <td colspan="5" class="text-center py-4">Nenhum dado encontrado.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
 
-      <div class="d-flex justify-content-between mt-3">
-        <button class="btn btn-outline-secondary btn-sm" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">Anterior</button>
-        <span>Página {{ currentPage + 1 }} de {{ totalPages }}</span>
-        <button class="btn btn-outline-secondary btn-sm" :disabled="currentPage + 1 >= totalPages" @click="changePage(currentPage + 1)">Próxima</button>
+    <div v-else class="card shadow-sm border-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Registro ANS</th>
+              <th>CNPJ</th>
+              <th>Razão Social</th>
+              <th>Modalidade</th>
+              <th class="text-center">UF</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="operadoras.length === 0">
+              <td colspan="5" class="text-center py-4 text-muted">Nenhuma operadora encontrada.</td>
+            </tr>
+            <tr v-for="op in operadoras" :key="op.registroAns">
+              <td class="ps-3 fw-bold text-secondary">{{ op.registroAns }}</td>
+              <td>{{ op.cnpj }}</td>
+              <td class="fw-semibold text-primary">{{ op.razaoSocial }}</td>
+              <td><span class="badge bg-light text-dark border">{{ op.modalidade }}</span></td>
+              <td class="text-center fw-bold">{{ op.uf }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card-footer bg-white d-flex justify-content-between py-3">
+        <button class="btn btn-sm btn-outline-secondary" @click="mudarPagina(-1)" :disabled="paginaAtual === 0">Anterior</button>
+        <span class="text-muted align-self-center">Página {{ paginaAtual + 1 }}</span>
+        <button class="btn btn-sm btn-outline-secondary" @click="mudarPagina(1)">Próxima</button>
       </div>
     </div>
   </div>
@@ -66,39 +70,39 @@ export default {
   data() {
     return {
       operadoras: [],
-      search: '',
-      loading: false,
-      currentPage: 0,
-      totalPages: 0,
-      pageSize: 10
+      loading: true,
+      termoBusca: '',
+      paginaAtual: 0
     }
   },
+  created() {
+    this.carregarOperadoras();
+  },
   methods: {
-    async fetchOperadoras() {
+    async carregarOperadoras() {
       this.loading = true;
       try {
-        const response = await api.get('/operadoras', {
-          params: { search: this.search, page: this.currentPage, limit: this.pageSize }
-        });
-        this.operadoras = response.data.content;
-        this.totalPages = response.data.totalPages;
+        const params = {
+          page: this.paginaAtual,
+          limit: 10,
+          search: this.termoBusca // Agora envia o termo para o Java
+        };
+        const response = await api.get('/operadoras', { params });
+        this.operadoras = response.data.content || response.data;
       } catch (error) {
-        console.error(error);
+        console.error("Erro ao listar", error);
       } finally {
         this.loading = false;
       }
     },
-    changePage(page) {
-      this.currentPage = page;
-      this.fetchOperadoras();
+    pesquisar() {
+      this.paginaAtual = 0;
+      this.carregarOperadoras();
     },
-    handleSearch() {
-      this.currentPage = 0;
-      this.fetchOperadoras();
+    mudarPagina(delta) {
+      this.paginaAtual += delta;
+      this.carregarOperadoras();
     }
-  },
-  mounted() {
-    this.fetchOperadoras();
   }
 }
 </script>
