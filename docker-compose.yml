@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: ans_db
+    environment:
+      POSTGRES_USER: user_ans
+      POSTGRES_PASSWORD: password_ans
+      POSTGRES_DB: ans_despesas_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ans_network
+networks:
+  ans_network:
+    driver: bridge
+volumes:
+  postgres_data:
