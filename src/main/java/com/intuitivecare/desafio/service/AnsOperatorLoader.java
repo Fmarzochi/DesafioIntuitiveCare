@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -69,8 +69,8 @@ public class AnsOperatorLoader {
     private void carregarNoBanco() throws IOException {
         System.out.println("Lendo CSV e salvando no banco via JPA (Assinado: Felipe Marzochi)...");
 
-        // O uso de ISO-8859-1 aqui é vital para corrigir os caracteres mal interpretados
-        try (Reader reader = Files.newBufferedReader(Paths.get(FILE_PATH), Charset.forName("ISO-8859-1"));
+        // Correção: Uso de UTF_8 para interpretar corretamente os acentos do arquivo da ANS
+        try (Reader reader = Files.newBufferedReader(Paths.get(FILE_PATH), StandardCharsets.UTF_8);
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT
                      .builder()
                      .setDelimiter(';')

@@ -31,16 +31,18 @@ public class OperadoraController {
     @Autowired
     private DadosAgregadosRepository dadosAgregadosRepository;
 
-    // Listagem Principal
+    // Listagem Principal (Atualizada para Busca Inteligente)
     @GetMapping("/operadoras")
     public Page<Operadora> listarOperadoras(
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
+
         if (search.isEmpty()) {
             return operadoraRepository.findAll(PageRequest.of(page, limit));
         } else {
-            return operadoraRepository.searchByRazaoSocial(search, PageRequest.of(page, limit));
+            // Alteramos aqui: Agora chamamos um método genérico que busca por Nome, CNPJ ou ANS
+            return operadoraRepository.buscarPorTexto(search, PageRequest.of(page, limit));
         }
     }
 
