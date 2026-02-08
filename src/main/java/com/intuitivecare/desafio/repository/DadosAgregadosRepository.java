@@ -12,7 +12,7 @@ public interface DadosAgregadosRepository extends JpaRepository<DadosAgregados, 
     @Query("SELECT SUM(d.totalDespesas) FROM DadosAgregados d")
     Double somarTotalGeral();
 
-    // Consulta 2: Agrupa por UF para o gráfico (Item 4.3 do PDF)
+    // Consulta 2: Agrupa por UF para o gráfico (Item 4.3)
     // Retorna algo como: [{"uf": "SP", "total": 5000.00}, {"uf": "RJ", "total": 3000.00}]
     @Query("SELECT new map(d.uf as uf, SUM(d.totalDespesas) as total) " +
             "FROM DadosAgregados d " +

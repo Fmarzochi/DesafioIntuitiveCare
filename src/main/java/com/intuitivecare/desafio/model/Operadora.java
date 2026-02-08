@@ -7,11 +7,11 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "operadoras") // O nome exato da tabela no seu banco
+@Table(name = "operadoras")
 public class Operadora {
 
     @Id
-    private String registroAns; // Usando registroAns como ID, confirme se é sua PK
+    private String registroAns; // Usando registroAns como ID.
 
     private String cnpj;
     private String razaoSocial;

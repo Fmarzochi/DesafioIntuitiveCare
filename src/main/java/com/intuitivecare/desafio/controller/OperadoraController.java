@@ -9,6 +9,7 @@ import com.intuitivecare.desafio.repository.DadosAgregadosRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/")
 @CrossOrigin(origins = "*")
 public class OperadoraController {
 
@@ -31,22 +32,35 @@ public class OperadoraController {
     @Autowired
     private DadosAgregadosRepository dadosAgregadosRepository;
 
-    // Listagem Principal (Atualizada para Busca Inteligente)
+    // --- CORREÇÃO DA BUSCA ---
     @GetMapping("/operadoras")
     public Page<Operadora> listarOperadoras(
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
 
-        if (search.isEmpty()) {
-            return operadoraRepository.findAll(PageRequest.of(page, limit));
+        Pageable pageable = PageRequest.of(page, limit);
+
+        if (search == null || search.trim().isEmpty()) {
+            return operadoraRepository.findAll(pageable);
         } else {
-            // Alteramos aqui: Agora chamamos um método genérico que busca por Nome, CNPJ ou ANS
-            return operadoraRepository.buscarPorTexto(search, PageRequest.of(page, limit));
+            // 1. Tenta limpar para pegar só números (caso seja busca por CNPJ)
+            String apenasNumeros = search.replaceAll("[^0-9]", "");
+
+            // 2. A CORREÇÃO CRÍTICA:
+            // Se "apenasNumeros" ficou vazio (significa que o usuário digitou só letras, ex: "AD SALUTE"),
+            // nós passamos um valor impossível para o filtro de CNPJ (ex: "XXX").
+            // Isso impede que o SQL faça "CNPJ LIKE '%%'" (que traria tudo) e força ele a respeitar o filtro de Nome.
+            if (apenasNumeros.isEmpty()) {
+                apenasNumeros = "00000000000000_valor_impossivel";
+            }
+
+            // Agora a busca funciona para os dois casos corretamente.
+            return operadoraRepository.buscarGeral(search, apenasNumeros, pageable);
         }
     }
 
-    // Detalhes da Operadora (Obrigatório Fase 4)
+    // Detalhes da Operadora
     @GetMapping("/operadoras/{registroAns}")
     public ResponseEntity<Operadora> buscarOperadora(@PathVariable String registroAns) {
         return operadoraRepository.findById(registroAns)
@@ -54,7 +68,7 @@ public class OperadoraController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Histórico de Despesas (Obrigatório Fase 4)
+    // Histórico de Despesas
     @GetMapping("/operadoras/{registroAns}/despesas")
     public ResponseEntity<List<Despesa>> listarDespesasDaOperadora(@PathVariable String registroAns) {
         List<Despesa> despesas = despesaRepository.findByOperadora_RegistroAns(registroAns);

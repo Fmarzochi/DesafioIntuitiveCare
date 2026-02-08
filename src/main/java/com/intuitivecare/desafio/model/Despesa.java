@@ -16,7 +16,7 @@ public class Despesa {
     @Column(name = "data_evento")
     private LocalDate dataEvento;
 
-    @Column(name = "descricao") // Ajuste se o nome da coluna no banco for diferente
+    @Column(name = "descricao")
     private String descricao;
 
     private Double valor;

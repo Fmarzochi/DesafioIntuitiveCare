@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "dados_agregados") // Atendendo ao Item 3.2 do PDF
+@Table(name = "dados_agregados") // Atendendo ao Item 3.2
 public class DadosAgregados {
 
     @Id

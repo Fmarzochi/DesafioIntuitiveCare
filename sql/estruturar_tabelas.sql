@@ -1,6 +1,6 @@
 -- ============================================================================
 -- ARQUIVO: estruturar_tabelas.sql
--- DESCRICAO: DDL para criacao das tabelas conforme Requisito 3.2 do PDF
+-- DESCRICAO: DDL para criacao das tabelas conforme Requisito 3.2
 -- AUTOR: Felipe Marzochi
 -- ============================================================================
 

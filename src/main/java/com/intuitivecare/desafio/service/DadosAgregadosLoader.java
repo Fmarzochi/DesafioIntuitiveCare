@@ -59,7 +59,6 @@ public class DadosAgregadosLoader {
                     dado.setRazaoSocial(record.get("Razao_Social"));
                     dado.setUf(record.get("UF"));
 
-                    // AQUI ESTÁ A CORREÇÃO: trocamos vírgula por ponto antes de converter
                     dado.setTotalDespesas(parseDouble(record.get("Total_Despesas")));
                     dado.setMediaTrimestral(parseDouble(record.get("Media_Trimestral")));
                     dado.setDesvioPadrao(parseDouble(record.get("Desvio_Padrao")));
