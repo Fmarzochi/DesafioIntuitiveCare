@@ -32,7 +32,7 @@ public class OperadoraController {
     @Autowired
     private DadosAgregadosRepository dadosAgregadosRepository;
 
-    // --- CORREÇÃO DA BUSCA ---
+    // --- MANTIDO: LISTAGEM COM BUSCA INTELIGENTE (NOME/CNPJ) ---
     @GetMapping("/operadoras")
     public Page<Operadora> listarOperadoras(
             @RequestParam(defaultValue = "") String search,
@@ -44,23 +44,19 @@ public class OperadoraController {
         if (search == null || search.trim().isEmpty()) {
             return operadoraRepository.findAll(pageable);
         } else {
-            // 1. Tenta limpar para pegar só números (caso seja busca por CNPJ)
+            // Lógica que já validamos e está funcionando:
             String apenasNumeros = search.replaceAll("[^0-9]", "");
 
-            // 2. A CORREÇÃO CRÍTICA:
-            // Se "apenasNumeros" ficou vazio (significa que o usuário digitou só letras, ex: "AD SALUTE"),
-            // nós passamos um valor impossível para o filtro de CNPJ (ex: "XXX").
-            // Isso impede que o SQL faça "CNPJ LIKE '%%'" (que traria tudo) e força ele a respeitar o filtro de Nome.
             if (apenasNumeros.isEmpty()) {
+                // Se digitou letras, anula a busca por CNPJ
                 apenasNumeros = "00000000000000_valor_impossivel";
             }
 
-            // Agora a busca funciona para os dois casos corretamente.
             return operadoraRepository.buscarGeral(search, apenasNumeros, pageable);
         }
     }
 
-    // Detalhes da Operadora
+    // --- MANTIDO: DETALHES ---
     @GetMapping("/operadoras/{registroAns}")
     public ResponseEntity<Operadora> buscarOperadora(@PathVariable String registroAns) {
         return operadoraRepository.findById(registroAns)
@@ -68,25 +64,38 @@ public class OperadoraController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Histórico de Despesas
+    // --- MANTIDO: DESPESAS ---
     @GetMapping("/operadoras/{registroAns}/despesas")
     public ResponseEntity<List<Despesa>> listarDespesasDaOperadora(@PathVariable String registroAns) {
         List<Despesa> despesas = despesaRepository.findByOperadora_RegistroAns(registroAns);
         return ResponseEntity.ok(despesas);
     }
 
-    // Estatísticas (Dashboard)
+    // --- ALTERADO AGORA: ESTATÍSTICAS (Incluindo Query 3.4) ---
     @GetMapping("/estatisticas")
     public Map<String, Object> getEstatisticas() {
         Map<String, Object> stats = new HashMap<>();
+
+        // 1. Total Geral (Já existia)
         Double total = dadosAgregadosRepository.somarTotalGeral();
         stats.put("total_despesas", total != null ? total : 0.0);
 
+        // 2. NOVO: Query 3.4 do PDF (Operadoras acima da média)
+        // Adicionamos isso para o frontend ter o que mostrar no novo cartão
+        try {
+            Integer qtdRuim = dadosAgregadosRepository.contarOperadorasComDesempenhoRuim();
+            stats.put("ops_acima_media", qtdRuim != null ? qtdRuim : 0);
+        } catch (Exception e) {
+            stats.put("ops_acima_media", 0); // Evita quebrar se o banco estiver vazio
+        }
+
+        // 3. Top 5 (Já existia)
         List<DadosAgregados> top5 = dadosAgregadosRepository.findAll(
                 PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "totalDespesas"))
         ).getContent();
         stats.put("top_5_operadoras", top5);
 
+        // 4. Por UF (Já existia)
         List<Map<String, Object>> porUf = dadosAgregadosRepository.agruparDespesasPorUf();
         stats.put("despesas_por_uf", porUf);
 

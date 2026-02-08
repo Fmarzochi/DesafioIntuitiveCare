@@ -6,10 +6,10 @@ import { Pie, Bar } from 'vue-chartjs';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-// --- CONFIGURAÇÃO DA API (INTACTO) ---
+// --- CONFIGURAÇÃO DA API ---
 const api = axios.create({ baseURL: 'http://localhost:8080' });
 
-// --- ESTADOS (INTACTO) ---
+// --- ESTADOS ---
 const abaAtual = ref('lista');
 const operadoras = ref([]);
 const termoBusca = ref("");
@@ -19,10 +19,12 @@ const operadoraSelecionada = ref(null);
 const historicoDespesas = ref([]);
 const exibindoDetalhes = ref(false);
 const valorTotalGeral = ref(0);
+// Variável para armazenar o dado da Query 3.4
+const opsAcimaMedia = ref(0);
 const dadosPizza = ref({ labels: [], datasets: [] });
 const dadosBarras = ref({ labels: [], datasets: [] });
 
-// --- FUNÇÃO CNPJ (INTACTO) ---
+// --- FUNÇÃO CNPJ ---
 const formatarCNPJ = (v) => {
   if (!v) return '';
   const apenasNumeros = v.toString().replace(/\D/g, '');
@@ -32,28 +34,41 @@ const formatarCNPJ = (v) => {
   return v;
 };
 
-// --- FUNÇÕES DO SISTEMA (INTACTO) ---
+// --- FUNÇÕES DO SISTEMA ---
+
+// 1. Carregar Dashboard
 const carregarDashboard = async () => {
   try {
     const res = await api.get('/estatisticas');
     const data = res.data;
+
+    // Valor Financeiro Total
     valorTotalGeral.value = data.total_despesas;
+
+    // Quantidade de operadoras com desempenho ruim (Query 3.4)
+    opsAcimaMedia.value = data.ops_acima_media;
+
     if (data.top_5_operadoras) {
       dadosBarras.value = {
         labels: data.top_5_operadoras.map(op => op.razaoSocial.substring(0, 15) + '...'),
         datasets: [{ label: 'R$', backgroundColor: '#10b981', data: data.top_5_operadoras.map(op => op.totalDespesas) }]
       };
     }
+
     if (data.despesas_por_uf) {
       const topUfs = data.despesas_por_uf.slice(0, 5);
       dadosPizza.value = {
         labels: topUfs.map(u => u.uf),
-        datasets: [{ backgroundColor: ['#1e293b', '#10b981', '#3498db', '#e11d48', '#f1c40f'], data: topUfs.map(u => u.total) }]
+        datasets: [{
+          backgroundColor: ['#1e293b', '#10b981', '#3498db', '#e11d48', '#f1c40f'],
+          data: topUfs.map(u => u.total)
+        }]
       };
     }
   } catch (e) { console.error("Erro Dashboard:", e); }
 };
 
+// 2. Buscar Lista
 const buscarOperadoras = async (p) => {
   try {
     const res = await api.get('/operadoras', { params: { page: p, search: termoBusca.value } });
@@ -64,6 +79,7 @@ const buscarOperadoras = async (p) => {
   } catch (e) { console.error("Erro Lista:", e); }
 };
 
+// 3. Detalhes
 const abrirDetalhes = async (op) => {
   try {
     operadoraSelecionada.value = op;
@@ -73,15 +89,16 @@ const abrirDetalhes = async (op) => {
   } catch (e) { alert("Erro ao carregar despesas."); }
 };
 
+// Navegação
 const irPara = (delta) => {
   const nova = paginaAtual.value + delta;
   if(nova >= 0 && nova < totalPaginas.value) buscarOperadoras(nova);
 }
 
-// FUNÇÃO NOVA: Resetar para Home (Limpa busca e volta pra lista)
+// Resetar Home
 const voltarParaHome = () => {
     abaAtual.value = 'lista';
-    termoBusca.value = ''; // Opcional: limpa a busca ao clicar no logo
+    termoBusca.value = '';
     buscarOperadoras(0);
 };
 
@@ -93,11 +110,9 @@ onMounted(() => { buscarOperadoras(0); carregarDashboard(); });
 
     <header class="main-header">
       <div class="container header-content">
-
-        <div class="logo-link" @click="voltarParaHome()" title="Voltar para a Página Inicial">
+        <div class="logo-link" @click="voltarParaHome()" title="Voltar para o Início">
           <h1>Intuitive Care <span>Desafio</span></h1>
         </div>
-
         <nav class="main-nav">
           <button @click="abaAtual = 'lista'" :class="{ active: abaAtual === 'lista' }">Lista</button>
           <button @click="abaAtual = 'dashboard'" :class="{ active: abaAtual === 'dashboard' }">Dashboard</button>
@@ -149,22 +164,34 @@ onMounted(() => { buscarOperadoras(0); carregarDashboard(); });
       </div>
 
       <div v-show="abaAtual === 'dashboard'">
-        <div class="kpi-card">
-          <label>Total de Despesas</label>
-          <div class="value">{{ valorTotalGeral?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}</div>
+
+        <div class="kpi-grid">
+
+            <div class="kpi-card">
+              <label>Total de Despesas (2025)</label>
+              <div class="value">{{ valorTotalGeral?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}</div>
+            </div>
+
+            <div class="kpi-card red-card">
+              <label>Acima da Média (2+ Tri)</label>
+              <div class="value-red">{{ opsAcimaMedia || 0 }}</div>
+              <small style="color: #94a3b8; display: block; margin-top: 5px;">Empresas com alto custo</small>
+            </div>
+
         </div>
+
         <div class="charts-row">
           <div class="chart-card">
-            <h3>Por UF</h3>
-            <div class="chart-wrapper">
-              <Pie v-if="dadosPizza.labels.length" :data="dadosPizza" :options="{ maintainAspectRatio: false }" />
-            </div>
+             <h3>Por UF</h3>
+             <div class="chart-wrapper">
+               <Pie v-if="dadosPizza.labels.length" :data="dadosPizza" :options="{ maintainAspectRatio: false }" />
+             </div>
           </div>
           <div class="chart-card">
-            <h3>Top 5 Custos</h3>
-            <div class="chart-wrapper">
-              <Bar v-if="dadosBarras.labels.length" :data="dadosBarras" :options="{ indexAxis: 'y', responsive: true, maintainAspectRatio: false }" />
-            </div>
+             <h3>Top 5 Custos</h3>
+             <div class="chart-wrapper">
+               <Bar v-if="dadosBarras.labels.length" :data="dadosBarras" :options="{ indexAxis: 'y', responsive: true, maintainAspectRatio: false }" />
+             </div>
           </div>
         </div>
       </div>
@@ -216,13 +243,10 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: #f8fafc; color: 
 /* HEADER */
 .main-header { background: #1e293b; color: white; padding: 1rem 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
 .header-content { display: flex; justify-content: space-between; align-items: center; }
-
-/* LOGO COMO LINK */
 .logo-link { cursor: pointer; transition: opacity 0.2s; user-select: none; }
 .logo-link:hover { opacity: 0.8; }
 .logo-link h1 { font-size: 1.4rem; margin: 0; font-weight: 800; letter-spacing: -0.5px; }
 .logo-link h1 span { color: #10b981; font-weight: 400; }
-
 .main-nav button { background: transparent; border: none; color: #94a3b8; padding: 8px 16px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
 .main-nav button:hover { color: white; }
 .main-nav button.active { color: white; background: rgba(255,255,255,0.1); border-radius: 8px; }
@@ -249,9 +273,16 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: #f8fafc; color: 
 .btn-nav:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* DASHBOARD */
-.kpi-card { background: white; padding: 40px; border-radius: 16px; text-align: center; border-top: 5px solid #10b981; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 30px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+
+.kpi-card { background: white; padding: 40px; border-radius: 16px; text-align: center; border-top: 5px solid #10b981; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
 .kpi-card label { display: block; color: #64748b; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
 .kpi-card .value { font-size: 3rem; font-weight: 800; color: #1e293b; }
+
+/* ESTILOS NOVOS PARA O CARD VERMELHO */
+.red-card { border-top-color: #e11d48; }
+.value-red { font-size: 3rem; font-weight: 800; color: #e11d48; }
+
 .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 40px; }
 .chart-card { background: white; padding: 25px; border-radius: 16px; height: 420px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; }
 .chart-wrapper { flex: 1; position: relative; width: 100%; min-height: 0; }
