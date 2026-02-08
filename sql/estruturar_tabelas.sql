@@ -1,9 +1,3 @@
--- ============================================================================
--- ARQUIVO: estruturar_tabelas.sql
--- DESCRICAO: DDL para criacao das tabelas conforme Requisito 3.2
--- AUTOR: Felipe Marzochi
--- ============================================================================
-
 -- 1. Tabela de Operadoras (Dados Cadastrais - Requisito 2.2)
 -- Justificativa: Separada para evitar duplicidade de dados cadastrais nas despesas (Normalização)
 CREATE TABLE IF NOT EXISTS operadoras (
@@ -46,4 +40,3 @@ CREATE TABLE IF NOT EXISTS dados_agregados (
     qtd_registros INT
 );
 
--- FIM DO SCRIPT

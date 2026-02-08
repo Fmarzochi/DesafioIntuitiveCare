@@ -54,7 +54,6 @@ public class CsvDataProcessor {
         String sqlInsert = "INSERT INTO demonstracoes_contabeis (data_competencia, reg_ans, cd_conta_contabil, descricao, vl_saldo_inicial, vl_saldo_final) VALUES (?, ?, ?, ?, ?, ?)";
         List<Object[]> batchArgs = new ArrayList<>();
 
-        // --- CORREÇÃO DE ENCODING ---
         // Mudamos para UTF_8. Se o arquivo original for UTF-8, isso corrige
         // tanto a leitura (crash) quanto a acentuação ("Assistência").
         try (BufferedReader reader = Files.newBufferedReader(caminhoArquivo, StandardCharsets.UTF_8);
