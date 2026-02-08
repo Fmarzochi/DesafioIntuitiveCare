@@ -10,6 +10,7 @@
 
 Este projeto foi desenvolvido com foco em **Performance** e **Integridade de Dados**. O desafio de processar arquivos CSV da ANS (que contêm milhões de registros) exigiu uma arquitetura híbrida, onde cada linguagem resolve um problema específico:
 
+* **Docker:** Garante que o ambiente do Banco de Dados seja reproduzível em qualquer máquina, sem necessidade de instalações locais complexas.
 * **Java (Spring Boot):** Atua como o "motor de força". Escolhi Java para o ETL porque o gerenciamento de memória da JVM e o ecossistema de streams são superiores para ler arquivos gigantes sem estourar a RAM.
 * **Python (FastAPI):** Atua como a "camada de inteligência". Escolhi Python para a API pela facilidade de manipulação de dados (Pandas/SQLAlchemy) e pela velocidade de desenvolvimento de endpoints assíncronos.
 * **PostgreSQL:** O banco relacional foi a escolha óbvia para garantir a tipagem forte (`NUMERIC`) dos dados financeiros.
@@ -22,12 +23,14 @@ Abaixo, detalho as escolhas arquiteturais baseadas nos requisitos do PDF.
 
 ### 1. Ingestão de Dados (ETL)
 * **Como fiz:** Implementei um leitor de CSV em Java que utiliza `BufferedReader` e envia os dados para o banco usando o protocolo `COPY` do PostgreSQL.
-* **Por que fiz:** A abordagem tradicional com JPA/Hibernate (`.save()`) seria inviável para milhões de linhas (demoraria horas). O protocolo `COPY` insere blocos de dados diretamente no binário do banco, reduzindo o tempo de carga para segundos.
+* **Por que fiz:** A abordagem tradicional com JPA/Hibernate (`.save()`) seria inviável para milhões de linhas (demoraria horas). O protocolo `COPY` insere blocos de dados diretamente no binário 
+* do banco, reduzindo o tempo de carga para segundos.
 * **Tratamento de Dados:** Implementei rotinas SQL para converter strings financeiras brasileiras (ex: `1.200,50`) para tipos `NUMERIC` nativos, garantindo precisão matemática e corrigindo erros de encoding (UTF-8/Latin1).
 
 ### 2. Performance da Tabela (Requisito 4.3.3)
 * **Estratégia:** Paginação no Lado do Servidor (Server-side Pagination).
-* **Justificativa:** O PDF questiona sobre exibir muitas operadoras. Carregar 50.000 operadoras no navegador do cliente travaria a interface (DOM excessivo). Optei por enviar apenas 10 registros por vez via SQL (`LIMIT 10 OFFSET X`). Isso mantém a interface leve e responsiva, independentemente do tamanho do banco de dados.
+* **Justificativa:** O PDF questiona sobre exibir muitas operadoras. Carregar 50.000 operadoras no navegador do cliente travaria a interface (DOM excessivo). Optei por enviar apenas 10 registros por vez via SQL (`LIMIT 10 OFFSET X`). 
+* Isso mantém a interface leve e responsiva, independentemente do tamanho do banco de dados.
 
 ### 3. Tratamento de Erros e Loading (Requisito 4.3.4)
 * **Estados de Loading:** Durante as requisições assíncronas (fetch), a interface exibe indicadores visuais (spinners ou skeleton screens) para informar ao usuário que o dado está sendo processado.
@@ -36,7 +39,8 @@ Abaixo, detalho as escolhas arquiteturais baseadas nos requisitos do PDF.
 
 ### 4. Trade-off: Query 1 (Crescimento vs Volume)
 * **Decisão:** Optei por exibir as **"Top 5 Maiores Despesas" (Volume Total)** ao invés do crescimento percentual.
-* **Justificativa Crítica:** Em análise de dados da ANS, operadoras inativas ou muito pequenas que gastam R$ 100,00 e passam a gastar R$ 500,00 apresentam um "crescimento" matemático de 400%, gerando ruído estatístico. Para um Dashboard de Visão Geral, entendi que identificar os **maiores volumes financeiros** (os "players" que movem o mercado) traz mais valor de negócio do que variações percentuais de pequenas entidades.
+* **Justificativa Crítica:** Em análise de dados da ANS, operadoras inativas ou muito pequenas que gastam R$ 100,00 e passam a gastar R$ 500,00 apresentam um "crescimento" matemático de 400%, gerando ruído estatístico. 
+* Para um Dashboard de Visão Geral, entendi que identificar os **maiores volumes financeiros** (os "players" que movem o mercado) traz mais valor de negócio do que variações percentuais de pequenas entidades.
 
 ---
 
