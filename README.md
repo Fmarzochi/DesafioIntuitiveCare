@@ -88,7 +88,9 @@ GET	/dashboard/top5	Retorna as operadoras com maiores despesas consolidadas.
 ---
 
 ## 🧪 Considerações Finais
-O código foi estruturado pensando em escalabilidade. A separação entre o processo de carga (Java) e o processo de leitura (Python) permite que, no futuro, o ETL rode em um servidor dedicado de processamento em batch sem impactar a performance da API que atende os usuários.
+O código foi estruturado pensando em escalabilidade. A separação entre o processo de 
+carga (Java) e o processo de leitura (Python) permite que, no futuro, o ETL rode em um servidor dedicado de processamento 
+em batch sem impactar a performance da API que atende os usuários.
 
 Desenvolvido por Felipe Marzochi
 
