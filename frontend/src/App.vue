@@ -173,7 +173,7 @@ onMounted(() => { buscarOperadoras(0); carregarDashboard(); });
             </div>
 
             <div class="kpi-card red-card">
-              <label>Acima da Média (2+ Tri)</label>
+              <label>Operadoras Acima da Média (2+ Tri)</label>
               <div class="value-red">{{ opsAcimaMedia || 0 }}</div>
               <small style="color: #94a3b8; display: block; margin-top: 5px;">Empresas com alto custo</small>
             </div>
