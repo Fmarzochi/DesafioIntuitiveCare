@@ -1,87 +1,91 @@
-# 🚧 README Temporário: Status do Projeto (Em Desenvolvimento)
+# 🚀 Teste Técnico Intuitive Care: Engenharia de Dados & Full Stack
 
-📍 **Fase Atual: Integração Frontend-Backend & Ajustes de Interface**
+![Status](https://img.shields.io/badge/Status-Entregue-success)
+![Java](https://img.shields.io/badge/ETL-Java%20Spring%20Boot-orange)
+![Python](https://img.shields.io/badge/API-Python%20FastAPI-blue)
+![Vue](https://img.shields.io/badge/Frontend-Vue.js%203-green)
+![Postgres](https://img.shields.io/badge/Database-PostgreSQL-blue)
 
-O projeto já superou o maior desafio técnico: a ingestão massiva de dados. Agora, estamos na etapa de refinamento da UI, garantindo que as funcionalidades de busca retornem todos os campos obrigatórios exigidos pelo PDF (**Registro ANS, CNPJ, Razão Social, Modalidade e UF**).
+## 📍 Visão Geral e Abordagem
 
----
+Este projeto foi desenvolvido com foco em **Performance** e **Integridade de Dados**. O desafio de processar arquivos CSV da ANS (que contêm milhões de registros) exigiu uma arquitetura híbrida, onde cada linguagem resolve um problema específico:
 
-## ✅ O que foi feito (Milestones Alcançados)
-
-### 🚀 Ingestão de Dados de Alta Performance
-- Desenvolvimento de scripts Java para processar milhões de linhas das Demonstrações Contábeis (**3T2025**).
-- Uso do protocolo **COPY Manager** para garantir velocidade superior ao JPA tradicional.
-
----
-
-### 📊 Dashboard Analítico
-- Consolidação financeira funcional com soma total de despesas (**Eventos Indenizáveis**).
-- Gráficos de **"Top 5 Operadoras"** e **"Distribuição por UF"** renderizando dados reais do banco.
+* **Java (Spring Boot):** Atua como o "motor de força". Escolhi Java para o ETL porque o gerenciamento de memória da JVM e o ecossistema de streams são superiores para ler arquivos gigantes sem estourar a RAM.
+* **Python (FastAPI):** Atua como a "camada de inteligência". Escolhi Python para a API pela facilidade de manipulação de dados (Pandas/SQLAlchemy) e pela velocidade de desenvolvimento de endpoints assíncronos.
+* **PostgreSQL:** O banco relacional foi a escolha óbvia para garantir a tipagem forte (`NUMERIC`) dos dados financeiros.
 
 ---
 
-### 🐳 Arquitetura Dockerizada
-- Ambiente PostgreSQL configurado via **Docker Compose** para persistência e portabilidade.
+## 🛠️ Decisões Técnicas e Justificativas (O "Como" e o "Porquê")
+
+Abaixo, detalho as escolhas arquiteturais baseadas nos requisitos do PDF.
+
+### 1. Ingestão de Dados (ETL)
+* **Como fiz:** Implementei um leitor de CSV em Java que utiliza `BufferedReader` e envia os dados para o banco usando o protocolo `COPY` do PostgreSQL.
+* **Por que fiz:** A abordagem tradicional com JPA/Hibernate (`.save()`) seria inviável para milhões de linhas (demoraria horas). O protocolo `COPY` insere blocos de dados diretamente no binário do banco, reduzindo o tempo de carga para segundos.
+* **Tratamento de Dados:** Implementei rotinas SQL para converter strings financeiras brasileiras (ex: `1.200,50`) para tipos `NUMERIC` nativos, garantindo precisão matemática e corrigindo erros de encoding (UTF-8/Latin1).
+
+### 2. Performance da Tabela (Requisito 4.3.3)
+* **Estratégia:** Paginação no Lado do Servidor (Server-side Pagination).
+* **Justificativa:** O PDF questiona sobre exibir muitas operadoras. Carregar 50.000 operadoras no navegador do cliente travaria a interface (DOM excessivo). Optei por enviar apenas 10 registros por vez via SQL (`LIMIT 10 OFFSET X`). Isso mantém a interface leve e responsiva, independentemente do tamanho do banco de dados.
+
+### 3. Tratamento de Erros e Loading (Requisito 4.3.4)
+* **Estados de Loading:** Durante as requisições assíncronas (fetch), a interface exibe indicadores visuais (spinners ou skeleton screens) para informar ao usuário que o dado está sendo processado.
+* **Dados Vazios:** Se uma busca não retorna resultados (ex: um CNPJ inexistente), o sistema exibe uma mensagem amigável ("Nenhum registro encontrado") em vez de uma tabela em branco, melhorando a UX.
+* **Erros de API:** Implementei blocos `try/catch` no Frontend. Caso a API Python esteja offline ou retorne erro 500, o usuário recebe um alerta visual (Toast/Modal) em vez de o site quebrar silenciosamente.
+
+### 4. Trade-off: Query 1 (Crescimento vs Volume)
+* **Decisão:** Optei por exibir as **"Top 5 Maiores Despesas" (Volume Total)** ao invés do crescimento percentual.
+* **Justificativa Crítica:** Em análise de dados da ANS, operadoras inativas ou muito pequenas que gastam R$ 100,00 e passam a gastar R$ 500,00 apresentam um "crescimento" matemático de 400%, gerando ruído estatístico. Para um Dashboard de Visão Geral, entendi que identificar os **maiores volumes financeiros** (os "players" que movem o mercado) traz mais valor de negócio do que variações percentuais de pequenas entidades.
 
 ---
 
-### 🔥 Criação do Backend e Frontend
-- Base **Spring Boot (API)** e Base **Vue.js (Vite)** estabelecidas e comunicando entre si.
+## 🚀 Como Executar o Projeto (Passo a Passo)
 
----
+Siga a ordem abaixo para garantir que o ambiente suba corretamente.
 
-## 🛠️ Como foi feito e Por quê?
-
-### ☕ Java + Spring Boot
-Escolhido pela robustez no tratamento de arquivos CSV e automação de fluxos.
-
----
-
-### 🐘 PostgreSQL (Protocolo COPY)
-Implementado porque o volume de dados da ANS (**milhões de linhas**) inviabiliza o insert tradicional. O COPY processa o volume total em segundos.
-
----
-
-### ⚡ Vue.js + Vite
-Utilizado para garantir que o dashboard seja rápido, moderno e altamente responsivo.
-
----
-
-### 💰 Tratamento de Moeda
-Conversão de `vl_saldo_final` de String (formato brasileiro) para Numeric via SQL para cálculos matemáticos precisos.
-
----
-
-## ⏳ O que ainda falta fazer (Próximos Passos)
-- **Funcionalidade de Busca (Botão Buscar)**: Ajustar o componente para que a tabela preencha as 5 colunas obrigatórias.
-- **Saneamento de Input**: Lógica para buscar CNPJ ignorando pontuações digitadas pelo usuário.
-- **Refinamento do CORS**: Garantir comunicação total entre as portas **5173** e **8080**.
-- **Finalização do README.md**: Documentação completa e guia de endpoints.
-
----
-
-# 🚀 Como rodar o projeto por hora
-
----
-
-## 1. Banco de Dados (Docker)
-Certifique-se de estar na raiz do projeto e que o Docker está ativo:
-
+### 1. Banco de Dados (Docker)
+A persistência é garantida via Docker. Na raiz do projeto:
 ```bash
-sudo docker compose down -v && sudo docker compose up -d
+cd docker
+docker compose up -d
 
----
-
-## 2. Backend (Java/Spring Boot)
+## 2. Backend ETL (Java)
+Na raiz do projeto
 ./mvnw spring-boot:run
-O sistema iniciará a carga automática de dados ao subir.
+Aguarde a mensagem "PROCESSO FINALIZADO" no console. Isso significa que o banco está carregado e pronto.
 
 ---
 
-## 3. Frontend (Vue.js/Vite)
-Abra uma nova aba no terminal, entre na pasta do frontend e rode o servidor:
+## 3. API (Python)
+Responsável por servir os dados ao Frontend.
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+---
+
+## 4. Frontend (Vue.js)
 cd frontend
 npm install
 npm run dev
+Acesse o Dashboard em: 👉 http://localhost:5173
 
-Acesse no navegador: 👉 http://localhost:5173
+---
+
+## 📡 Documentação da API
+A API foi construída em REST. Abaixo, as rotas principais para teste:
+Método	Endpoint	Função
+GET	/operadoras	Retorna a lista paginada. Aceita param search (Nome ou Registro ANS).
+GET	/operadoras/{registro}/despesas	Busca o histórico financeiro detalhado de uma operadora específica.
+GET	/dashboard/uf	Retorna o JSON agregado para o gráfico de distribuição por Estado.
+GET	/dashboard/top5	Retorna as operadoras com maiores despesas consolidadas.
+
+---
+
+## 🧪 Considerações Finais
+O código foi estruturado pensando em escalabilidade. A separação entre o processo de carga (Java) e o processo de leitura (Python) permite que, no futuro, o ETL rode em um servidor dedicado de processamento em batch sem impactar a performance da API que atende os usuários.
+
+Desenvolvido por Felipe Marzochi
+
+---
