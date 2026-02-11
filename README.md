@@ -45,7 +45,7 @@ Abaixo, detalho as escolhas arquiteturais baseadas nos requisitos do PDF.
 * **Erros de API:** Implementei blocos `try/catch` no Frontend. Caso a API Python esteja offline ou retorne erro 500, o usuário recebe um alerta visual (Toast/Modal) em vez de 
 * o site quebrar silenciosamente.
 
-### 4. Trade-off: Query 1 (Crescimento vs Volume)
+### 4. Trade-off: (Crescimento vs Volume)
 * **Decisão:** Optei por exibir as **"Top 5 Maiores Despesas" (Volume Total)** ao invés do crescimento percentual.
 * **Justificativa Crítica:** Em análise de dados da ANS, operadoras inativas ou muito pequenas que gastam R$ 100,00 e 
 * passam a gastar R$ 500,00 apresentam um "crescimento" matemático de 400%, gerando ruído estatístico. Para um Dashboard
