@@ -26,11 +26,7 @@ public class AnsDespesasApplication {
     public CommandLineRunner run(AnsOperatorLoader operadoraLoader, DadosAgregadosLoader agregadosLoader, CsvDataProcessor csvProcessor) {
         return args -> {
             System.out.println("INICIANDO O SISTEMA EM MODO DE ALTA PERFORMANCE (COPY PROTOCOL)");
-
-            // 1. Eu preparo o banco
             prepararBancoDeDados();
-
-            // 2. Eu disparo o processamento
             new Thread(() -> {
                 try {
                     executarCargaDeDados(operadoraLoader, agregadosLoader, csvProcessor);
@@ -39,13 +35,11 @@ public class AnsDespesasApplication {
                 }
             }).start();
 
-            System.out.println("SISTEMA PRONTO NA PORTA 8080 (O banco esta trabalhando em background)");
+            System.out.println("PROCESSAMENTO INICIADO EM BACKGROUND... (O Java encerrará automaticamente ao fim)");
         };
     }
 
     private void prepararBancoDeDados() {
-        // O comando COPY do Postgres e mais rapido se nao precisar converter numeros durante a leitura.
-        // Eu faco a conversao numerica depois, via SQL, que e instantaneo.
         jdbcTemplate.execute("DROP TABLE IF EXISTS demonstracoes_contabeis");
         jdbcTemplate.execute("""
             CREATE UNLOGGED TABLE demonstracoes_contabeis (
@@ -57,7 +51,6 @@ public class AnsDespesasApplication {
                 vl_saldo_final VARCHAR(50)
             );
         """);
-        // Indices sao criados DEPOIS da carga para nao frear a importacao
     }
 
     private void executarCargaDeDados(AnsOperatorLoader operadoraLoader, DadosAgregadosLoader agregadosLoader, CsvDataProcessor processor) throws Exception {
@@ -72,10 +65,7 @@ public class AnsDespesasApplication {
             downloader.baixarEExtrair(links);
 
             System.out.println("Iniciando ingestao via COPY Manager (Velocidade Maxima)...");
-
-            // Aqui o processador usa o driver nativo do Postgres
             processor.processar();
-
             System.out.println("Criando indices para otimizar a busca...");
             jdbcTemplate.execute("CREATE INDEX idx_dc_descricao ON demonstracoes_contabeis(descricao);");
             jdbcTemplate.execute("CREATE INDEX idx_dc_reg_ans ON demonstracoes_contabeis(reg_ans);");
@@ -90,10 +80,8 @@ public class AnsDespesasApplication {
             """);
 
             System.out.println("Consolidando e convertendo valores monetarios...");
-            // Eu limpo a tabela de despesas para garantir dados novos
             jdbcTemplate.execute("DELETE FROM despesas");
 
-            // Eu uso REPLACE para trocar virgula por ponto e CAST para numerico
             jdbcTemplate.execute("""
                 INSERT INTO despesas (data_evento, descricao, valor, operadora_id)
                 SELECT 
@@ -122,5 +110,7 @@ public class AnsDespesasApplication {
             """);
         }
         System.out.println("PROCESSO FINALIZADO");
+        System.out.println("Encerrando Aplicação Java (ETL Concluído com Sucesso).");
+        System.exit(0);
     }
 }

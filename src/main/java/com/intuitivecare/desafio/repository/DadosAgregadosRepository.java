@@ -11,14 +11,12 @@ import java.util.Map;
 @Repository
 public interface DadosAgregadosRepository extends JpaRepository<DadosAgregados, Long> {
 
-    // --- MÉTODOS VISUAIS ---
     @Query("SELECT SUM(d.totalDespesas) FROM DadosAgregados d")
     Double somarTotalGeral();
 
     @Query("SELECT new map(d.uf as uf, SUM(d.totalDespesas) as total) FROM DadosAgregados d GROUP BY d.uf ORDER BY SUM(d.totalDespesas) DESC")
     List<Map<String, Object>> agruparDespesasPorUf();
 
-    // --- QUERY "INIMIGO DO GUPY" (ULTIMATE FIX) ---
     @Query(value = """
         WITH DadosMinerados AS (
             SELECT 

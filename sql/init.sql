@@ -1,11 +1,10 @@
--- ============================================================================
--- ARQUIVO: init.sql
--- DESCRICAO: Criação das tabelas conforme Requisito 3.2 (Normalização e Índices)
--- ============================================================================
+-- 1. Limpeza inicial
+DROP TABLE IF EXISTS dados_agregados;
+DROP TABLE IF EXISTS despesas;
+DROP TABLE IF EXISTS operadoras;
 
--- 1. TABELA DE OPERADORAS (Dados Cadastrais)
--- Guarda quem são as empresas. A chave primária é o Registro ANS.
-CREATE TABLE IF NOT EXISTS operadoras (
+-- 2. Tabela de Operadoras (Dados Cadastrais)
+CREATE TABLE operadoras (
     registro_ans VARCHAR(20) PRIMARY KEY,
     cnpj VARCHAR(20) NOT NULL,
     razao_social VARCHAR(255) NOT NULL,
@@ -13,34 +12,30 @@ CREATE TABLE IF NOT EXISTS operadoras (
     uf VARCHAR(2)
 );
 
--- Índice para deixar a busca por nome rápida (Requisito 4.3)
-CREATE INDEX IF NOT EXISTS idx_operadora_nome ON operadoras(razao_social);
+-- Índices para busca rápida
+CREATE INDEX idx_operadoras_razao ON operadoras(razao_social);
+CREATE INDEX idx_operadoras_cnpj ON operadoras(cnpj);
 
-
--- 2. TABELA DE DESPESAS (Dados Financeiros Consolidados)
--- Guarda os valores monetários. Está separada para não duplicar dados da empresa.
-CREATE TABLE IF NOT EXISTS despesas (
+-- 3. Tabela de Despesas
+CREATE TABLE despesas (
     id SERIAL PRIMARY KEY,
     data_evento DATE,
     descricao VARCHAR(255),
-    valor NUMERIC(20, 2), -- NUMERIC é melhor para dinheiro que FLOAT (Trade-off técnico)
+    valor NUMERIC(20, 2),
     operadora_id VARCHAR(20),
     CONSTRAINT fk_operadora FOREIGN KEY (operadora_id) REFERENCES operadoras(registro_ans)
 );
 
--- Índices para as queries analíticas rodarem rápido (Requisito 3.4)
-CREATE INDEX IF NOT EXISTS idx_despesa_data ON despesas(data_evento);
-CREATE INDEX IF NOT EXISTS idx_despesa_op ON despesas(operadora_id);
+CREATE INDEX idx_despesas_data ON despesas(data_evento);
+CREATE INDEX idx_despesas_op_id ON despesas(operadora_id);
 
-
--- 3. TABELA DE DADOS AGREGADOS (Dashboard)
--- Tabela de "cache" para o gráfico não travar calculando milhões de linhas na hora.
-CREATE TABLE IF NOT EXISTS dados_agregados (
+-- 4. Tabela de Cache para Dashboard (KPIs)
+CREATE TABLE dados_agregados (
     id SERIAL PRIMARY KEY,
+    registro_ans VARCHAR(20),
     razao_social VARCHAR(255),
     uf VARCHAR(2),
     total_despesas NUMERIC(20, 2),
-    media_trimestral NUMERIC(20, 2),
-    desvio_padrao NUMERIC(20, 2),
-    qtd_registros INT
+    CONSTRAINT fk_agregado_op FOREIGN KEY (registro_ans) REFERENCES operadoras(registro_ans)
 );
+

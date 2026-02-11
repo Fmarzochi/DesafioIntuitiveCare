@@ -11,7 +11,6 @@ class Operadora(Base):
     modalidade = Column(String)
     uf = Column(String)
 
-    # Relacionamento com despesas
     despesas = relationship("Despesa", back_populates="operadora")
 
 class Despesa(Base):

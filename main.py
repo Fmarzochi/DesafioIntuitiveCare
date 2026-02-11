@@ -6,7 +6,7 @@ import math
 # --- CONFIGURAÇÃO ---
 DATABASE_URL = "postgresql://user_ans:password_ans@localhost:5432/ans_despesas_db"
 
-app = FastAPI(title="Intuitive Care Desafio - API Final")
+app = FastAPI(title="API Intuitive Care Final")
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,106 +18,116 @@ app.add_middleware(
 
 engine = create_engine(DATABASE_URL)
 
-# --- MOTOR DE CORREÇÃO ORTOGRÁFICA (MAPA DE CARACTERES ANS) ---
+# --- CORREÇÃO ORTOGRÁFICA  ---
 def corrigir_texto(texto):
-    if not texto:
-        return ""
-
-    # 1. Tenta reverter encoding básico
+    if not texto: return ""
     try:
         t = texto.encode('latin1').decode('utf-8')
     except:
         t = texto
 
-    # 2. MAPEAMENTO ESPECÍFICO (Baseado nos seus prints e textos colados)
-    # Resolve: AssistãŠncia, ã€ Saãšde, Provisã£o, Variaã‡ãƒo
+    # Mapa de caracteres
     correcoes = {
-        "ãŠ": "ê",  # AssistãŠncia -> Assistência
-        "ã€": "à",  # ã€ Saãšde -> à Saúde
-        "ãš": "ú",  # Saãšde -> Saúde
-        "ã£": "ã",  # Provisã£o / Nã£o -> Provisão / Não
-        "ã§": "ç",  # Serviã§os -> Serviços
-        "ã‡": "ç",  # Variaã‡ãƒo -> Variação (parte 1)
-        "ãƒ": "ã",  # Variaã‡ãƒo -> Variação (parte 2)
-        "ã‰": "é",  # Mã‰dico -> Médico
-        "ã©": "é",
-        "ã³": "ó",
-        "ã¡": "á",
-        "ãµ": "õ",
-        "ã": "í"
+        "ãŠ": "ê", "ã€": "à", "ãš": "ú", "ã£": "ã", "ã§": "ç",
+        "ã‡": "ç", "ãƒ": "ã", "ã‰": "é", "ã©": "é", "ã³": "ó",
+        "ã¡": "á", "ãµ": "õ", "ã": "í"
     }
-
     for errado, certo in correcoes.items():
         t = t.replace(errado, certo)
+    return t.title()
 
-    return t
-
-def formatar_cnpj(cnpj_raw):
-    if not cnpj_raw or len(str(cnpj_raw)) < 14: return cnpj_raw
-    c = str(cnpj_raw).zfill(14)
-    return f"{c[0:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:14]}"
+def formatar_cnpj(v):
+    if not v: return ""
+    v = str(v).replace('.', '').replace('/', '').replace('-', '').strip()
+    if len(v) == 14:
+        return f"{v[:2]}.{v[2:5]}.{v[5:8]}/{v[8:12]}-{v[12:]}"
+    return v
 
 # --- ROTAS ---
 
+# 1. LISTAGEM E BUSCA
 @app.get("/operadoras")
-def listar_operadoras(search: str = "", page: int = Query(1, ge=1), per_page: int = Query(10, le=100)):
+def listar_operadoras(
+    search: str = Query(default=""),
+    page: int = Query(default=0),  # Aceita 0
+    limit: int = Query(default=10)
+):
+    offset = page * limit
+
     with engine.connect() as conn:
-        offset = (page - 1) * per_page
-        filtros = ""
-        params = {"limit": per_page, "offset": offset}
+        # SQL Base
+        sql = "SELECT registro_ans, cnpj, razao_social, modalidade, uf FROM operadoras"
+        params = {"limit": limit, "offset": offset}
+
+        # Filtro de Busca Híbrido (Texto e Números)
         if search:
-            filtros = "WHERE razao_social ILIKE :search OR registro_ans::text ILIKE :search"
-            params["search"] = f"%{search}%"
+            # Versão limpa para bater com CNPJ/Registro (remove pontos e traços)
+            termo_limpo = search.replace(".", "").replace("/", "").replace("-", "").strip()
 
-        sql_count = text(f"SELECT COUNT(*) FROM operadoras {filtros}")
-        total_items = conn.execute(sql_count, params).scalar() or 0
+            # Busca: Nome (ILIKE normal) OU Registro OU CNPJ (limpo)
+            sql += """ WHERE
+                razao_social ILIKE :termo
+                OR registro_ans ILIKE :termo
+                OR cnpj ILIKE :termo_limpo
+            """
+            params["termo"] = f"%{search}%"
+            params["termo_limpo"] = f"%{termo_limpo}%"
 
-        sql_data = text(f"SELECT registro_ans, cnpj, razao_social, modalidade, uf FROM operadoras {filtros} ORDER BY razao_social ASC LIMIT :limit OFFSET :offset")
-        result = conn.execute(sql_data, params).fetchall()
+        sql += " ORDER BY razao_social LIMIT :limit OFFSET :offset"
+
+        # Contagem para paginação
+        count_sql = "SELECT COUNT(*) FROM operadoras"
+        if search:
+            termo_limpo = search.replace(".", "").replace("/", "").replace("-", "").strip()
+            count_sql += """ WHERE
+                razao_social ILIKE :termo
+                OR registro_ans ILIKE :termo
+                OR cnpj ILIKE :termo_limpo
+            """
+
+        total = conn.execute(text(count_sql), params).scalar() or 0
+        result = conn.execute(text(sql), params).fetchall()
 
         return {
-            "data": [{
-                "registro_ans": r[0],
-                "cnpj": formatar_cnpj(r[1]),
-                "razao_social": corrigir_texto(r[2]),
-                "modalidade": corrigir_texto(r[3]),
-                "uf": r[4]
-            } for r in result],
-            "meta": {"total_items": total_items, "total_pages": math.ceil(total_items / per_page), "current_page": page}
+            "content": [{
+                "registroAns": row[0],
+                "cnpj": formatar_cnpj(row[1]),
+                "razaoSocial": corrigir_texto(row[2]),
+                "modalidade": corrigir_texto(row[3]),
+                "uf": row[4]
+            } for row in result],
+            "totalPages": math.ceil(total / limit) if limit > 0 else 1
         }
 
-@app.get("/dashboard/uf")
-def estatisticas_uf():
+# 2. DASHBOARD (Com KPI Real)
+@app.get("/estatisticas")
+def get_dashboard():
     with engine.connect() as conn:
-        sql = text("SELECT uf, SUM(total_despesas) as total FROM dados_agregados WHERE uf IS NOT NULL GROUP BY uf ORDER BY total DESC")
-        result = conn.execute(sql).fetchall()
-        if not result:
-            sql = text("SELECT o.uf, SUM(d.valor) as total FROM despesas d JOIN operadoras o ON d.operadora_id = o.registro_ans GROUP BY o.uf ORDER BY total DESC")
-            result = conn.execute(sql).fetchall()
+        try:
+            total = conn.execute(text("SELECT SUM(total_despesas) FROM dados_agregados")).scalar() or 0.0
 
-        labels = [row[0] for row in result]
-        data = [float(row[1]) for row in result]
-        return {"labels": labels, "datasets": data, "total_geral": sum(data)}
+            # Quantas empresas gastaram mais que a média?
+            kpi_sql = "SELECT COUNT(*) FROM dados_agregados WHERE total_despesas > (SELECT AVG(total_despesas) FROM dados_agregados)"
+            acima_media = conn.execute(text(kpi_sql)).scalar() or 0
 
+            top5_res = conn.execute(text("SELECT razao_social, total_despesas FROM dados_agregados ORDER BY total_despesas DESC LIMIT 5")).fetchall()
+            top5 = [{"razaoSocial": corrigir_texto(r[0]), "totalDespesas": float(r[1])} for r in top5_res]
+
+            uf_res = conn.execute(text("SELECT uf, SUM(total_despesas) as total FROM dados_agregados GROUP BY uf ORDER BY total DESC LIMIT 5")).fetchall()
+            ufs = [{"uf": r[0], "total": float(r[1])} for r in uf_res]
+
+            return {
+                "total_despesas": float(total),
+                "ops_acima_media": int(acima_media),
+                "top_5_operadoras": top5,
+                "despesas_por_uf": ufs
+            }
+        except:
+            return {"total_despesas": 0, "ops_acima_media": 0, "top_5_operadoras": [], "despesas_por_uf": []}
+
+# 3. DETALHES
 @app.get("/operadoras/{registro}/despesas")
-def historico_operadora(registro: str):
+def detalhes(registro: str):
     with engine.connect() as conn:
-        op = conn.execute(text("SELECT razao_social, cnpj FROM operadoras WHERE registro_ans = :reg"), {"reg": registro}).fetchone()
-        if not op: raise HTTPException(status_code=404)
-
-        hist = conn.execute(text("""
-            SELECT data_evento, descricao, valor
-            FROM despesas
-            WHERE operadora_id = :reg
-            ORDER BY valor DESC LIMIT 50
-        """), {"reg": registro}).fetchall()
-
-        return {
-            "razao_social": corrigir_texto(op[0]),
-            "cnpj": formatar_cnpj(op[1]),
-            "historico": [{
-                "data": str(row[0]),
-                "descricao": corrigir_texto(row[1]),
-                "valor": float(row[2])
-            } for row in hist]
-        }
+        res = conn.execute(text("SELECT data_evento, descricao, valor FROM despesas WHERE operadora_id = :reg ORDER BY data_evento DESC LIMIT 50"), {"reg": registro}).fetchall()
+        return [{"dataEvento": str(r[0]), "descricao": r[1], "valor": float(r[2])} for r in res]

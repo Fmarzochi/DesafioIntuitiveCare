@@ -55,7 +55,6 @@ public class OperadoraController {
         }
     }
 
-    // --- DETALHES ---
     @GetMapping("/operadoras/{registroAns}")
     public ResponseEntity<Operadora> buscarOperadora(@PathVariable String registroAns) {
         return operadoraRepository.findById(registroAns)
@@ -70,7 +69,7 @@ public class OperadoraController {
         return ResponseEntity.ok(despesas);
     }
 
-    //  ESTATÍSTICAS (Incluindo Query 3.4) ---
+    // --- ESTATÍSTICAS ---
     @GetMapping("/estatisticas")
     public Map<String, Object> getEstatisticas() {
         Map<String, Object> stats = new HashMap<>();
@@ -79,7 +78,7 @@ public class OperadoraController {
         Double total = dadosAgregadosRepository.somarTotalGeral();
         stats.put("total_despesas", total != null ? total : 0.0);
 
-        // 2. NOVO: Query 3.4 do PDF (Operadoras acima da média)
+        // 2. (Operadoras acima da média)
         try {
             Integer qtdRuim = dadosAgregadosRepository.contarOperadorasComDesempenhoRuim();
             stats.put("ops_acima_media", qtdRuim != null ? qtdRuim : 0);
@@ -93,7 +92,7 @@ public class OperadoraController {
         ).getContent();
         stats.put("top_5_operadoras", top5);
 
-        // 4. Por UF (Já existia)
+        // 4. Por UF
         List<Map<String, Object>> porUf = dadosAgregadosRepository.agruparDespesasPorUf();
         stats.put("despesas_por_uf", porUf);
 

@@ -1,63 +1,77 @@
 <template>
-  <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-      <h2 class="text-primary fw-bold">Operadoras de Saúde</h2>
-      <router-link to="/dashboard" class="btn btn-primary shadow-sm">
-        📊 Ver Dashboard Financeiro
-      </router-link>
-    </div>
-
+  <div>
     <div class="card shadow-sm mb-4 border-0">
-      <div class="card-body">
-        <form @submit.prevent="pesquisar" class="d-flex gap-2">
+      <div class="card-body p-4">
+        <form @submit.prevent="buscarNova" class="d-flex gap-3">
           <input
             v-model="termoBusca"
             type="text"
-            class="form-control"
-            placeholder="Digite o nome, registro ANS ou CNPJ..."
+            class="form-control form-control-lg"
+            placeholder="Digite: Nome, Registro ANS ou CNPJ..."
           />
-          <button type="submit" class="btn btn-dark px-4">
-            🔍 Buscar
+          <button type="submit" class="btn btn-success btn-lg px-4 fw-bold">
+            Buscar
           </button>
         </form>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status"></div>
-    </div>
-
-    <div v-else class="card shadow-sm border-0">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th class="ps-3">Registro ANS</th>
-              <th>CNPJ</th>
-              <th>Razão Social</th>
-              <th>Modalidade</th>
-              <th class="text-center">UF</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="operadoras.length === 0">
-              <td colspan="5" class="text-center py-4 text-muted">Nenhuma operadora encontrada.</td>
-            </tr>
-            <tr v-for="op in operadoras" :key="op.registroAns">
-              <td class="ps-3 fw-bold text-secondary">{{ op.registroAns }}</td>
-              <td>{{ op.cnpj }}</td>
-              <td class="fw-semibold text-primary">{{ op.razaoSocial }}</td>
-              <td><span class="badge bg-light text-dark border">{{ op.modalidade }}</span></td>
-              <td class="text-center fw-bold">{{ op.uf }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="card shadow-sm border-0">
+      <div v-if="loading" class="text-center py-5">
+        <div class="spinner-border text-success" role="status"></div>
       </div>
 
-      <div class="card-footer bg-white d-flex justify-content-between py-3">
-        <button class="btn btn-sm btn-outline-secondary" @click="mudarPagina(-1)" :disabled="paginaAtual === 0">Anterior</button>
-        <span class="text-muted align-self-center">Página {{ paginaAtual + 1 }}</span>
-        <button class="btn btn-sm btn-outline-secondary" @click="mudarPagina(1)">Próxima</button>
+      <div v-else>
+        <div v-if="operadoras.length === 0" class="text-center py-5 text-muted">
+          Nenhum resultado encontrado para "{{ termoBusca }}".
+        </div>
+
+        <div v-else class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-uppercase small text-muted">
+              <tr>
+                <th class="ps-4 py-3">Registro</th>
+                <th>CNPJ</th>
+                <th>Razão Social</th>
+                <th>UF</th>
+                <th class="text-end pe-4">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="op in operadoras" :key="op.registroAns">
+                <td class="ps-4 fw-bold text-primary">{{ op.registroAns }}</td>
+
+                <td style="font-family: monospace; font-size: 0.95rem;">
+                  {{ formatarCNPJ(op.cnpj) }}
+                </td>
+
+                <td class="text-truncate" style="max-width: 350px;">{{ op.razaoSocial }}</td>
+                <td><span class="badge bg-light text-dark border">{{ op.uf }}</span></td>
+                <td class="text-end pe-4">
+                  <router-link :to="`/operadoras/${op.registroAns}`" class="btn btn-sm btn-outline-primary">
+                    Detalhes
+                  </router-link>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-footer bg-white py-3">
+        <div class="d-flex justify-content-center gap-3 align-items-center">
+          <button class="btn btn-outline-secondary btn-sm" @click="mudarPagina(-1)" :disabled="paginaAtual === 0">
+            Anterior
+          </button>
+
+          <span class="fw-bold text-muted">
+            Página {{ paginaAtual + 1 }} de {{ totalPaginas }}
+          </span>
+
+          <button class="btn btn-outline-secondary btn-sm" @click="mudarPagina(1)" :disabled="paginaAtual >= totalPaginas - 1">
+            Próxima
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -72,36 +86,40 @@ export default {
       operadoras: [],
       loading: true,
       termoBusca: '',
-      paginaAtual: 0
+      paginaAtual: 0,
+      totalPaginas: 1
     }
   },
-  created() {
-    this.carregarOperadoras();
-  },
+  created() { this.carregarOperadoras(); },
   methods: {
     async carregarOperadoras() {
       this.loading = true;
       try {
-        const params = {
-          page: this.paginaAtual,
-          limit: 10,
-          search: this.termoBusca // Agora envia o termo para o Java
-        };
-        const response = await api.get('/operadoras', { params });
-        this.operadoras = response.data.content || response.data;
-      } catch (error) {
-        console.error("Erro ao listar", error);
-      } finally {
-        this.loading = false;
-      }
+        const response = await api.get('/operadoras', {
+          params: { page: this.paginaAtual, limit: 10, search: this.termoBusca }
+        });
+
+        this.operadoras = response.data.content || [];
+        this.totalPaginas = response.data.totalPages || 1;
+
+      } catch (e) {
+        console.error("Erro ao carregar:", e);
+        this.operadoras = [];
+      } finally { this.loading = false; }
     },
-    pesquisar() {
+    buscarNova() {
       this.paginaAtual = 0;
       this.carregarOperadoras();
     },
     mudarPagina(delta) {
       this.paginaAtual += delta;
       this.carregarOperadoras();
+    },
+    // Formata visualmente sem alterar o dado original
+    formatarCNPJ(v) {
+      if (!v) return '';
+      v = v.replace(/\D/g, '');
+      return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
     }
   }
 }

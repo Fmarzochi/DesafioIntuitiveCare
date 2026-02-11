@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 public interface OperadoraRepository extends JpaRepository<Operadora, String> {
 
     // --- BUSCA INTELIGENTE (CNPJ, NOME E ANS) ---
-    // Esta query aceita dois parâmetros:
     // :termo -> O texto exatamente como o usuário digitou (para buscar nomes)
     // :termoNumerico -> Apenas os números (para buscar CNPJ mesmo se tiver pontos na busca)
     @Query("SELECT o FROM Operadora o WHERE " +
