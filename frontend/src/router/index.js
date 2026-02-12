@@ -11,8 +11,8 @@ const router = createRouter({
       component: HomeView
     },
     {
-      path: '/pesquisa',
-      name: 'pesquisa',
+      path: '/operadoras', // CORREÇÃO: Mudado de '/pesquisa' para '/operadoras' para coincidir com o Menu
+      name: 'operadoras',
       component: OperadorasView
     },
     {

@@ -34,7 +34,7 @@
             </thead>
             <tbody>
               <tr v-for="(d, index) in despesas" :key="index">
-                <td class="fw-bold text-secondary">{{ formatarDataBR(d.dataEvento) }}</td>
+                <td class="fw-bold text-secondary">{{ formatarDataBR(d.data_evento || d.dataEvento) }}</td>
 
                 <td>{{ formatarTextoFrontend(d.descricao) }}</td>
 
@@ -56,11 +56,14 @@ export default {
   data() { return { operadora: null, despesas: [], loading: true } },
   async created() {
     try {
+      // Busca dados da operadora
       const opResp = await api.get(`/operadoras?search=${this.registroAns}`);
       if (opResp.data.content && opResp.data.content.length > 0) {
-         this.operadora = opResp.data.content[0];
+         // Encontra a operadora correta na lista filtrada
+         this.operadora = opResp.data.content.find(op => op.registroAns == this.registroAns);
       }
 
+      // Busca despesas financeiras
       const despResp = await api.get(`/operadoras/${this.registroAns}/despesas`);
       this.despesas = despResp.data;
 
@@ -71,7 +74,6 @@ export default {
     }
   },
   methods: {
-    // --- LÓGICA DE FORMATAÇÃO DE TEXTO DO PDF ---
     formatarTextoFrontend(texto) {
       if (!texto) return '';
 
@@ -88,11 +90,9 @@ export default {
       });
 
       out = out.replace(/\b([a-z]{3})$/gi, (match) => {
-        // Proteção: Não colocar em caixa alta preposições comuns se estiverem no final (raro, mas possível)
         const preposicoes = ['dos', 'das', 'aos', 'por', 'com', 'sem'];
-        if (preposicoes.includes(match.toLowerCase())) return match; // Mantém como está (Title Case)
-
-        return match.toUpperCase(); // Vira sigla (ex: GRU, SUS)
+        if (preposicoes.includes(match.toLowerCase())) return match;
+        return match.toUpperCase();
       });
       out = out.replace(/\s(De|Da|Do|Dos|Das|E|Em|Por|Com)\s/g, (match) => match.toLowerCase());
       return out;
@@ -104,6 +104,7 @@ export default {
 
     formatarDataBR(dataIso) {
       if (!dataIso) return '-';
+      // Garante que a data ISO (YYYY-MM-DD) seja quebrada corretamente
       const [ano, mes, dia] = dataIso.split('-');
       return `${dia}/${mes}/${ano}`;
     },

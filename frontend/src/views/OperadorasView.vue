@@ -115,7 +115,6 @@ export default {
       this.paginaAtual += delta;
       this.carregarOperadoras();
     },
-    // Formata visualmente sem alterar o dado original
     formatarCNPJ(v) {
       if (!v) return '';
       v = v.replace(/\D/g, '');

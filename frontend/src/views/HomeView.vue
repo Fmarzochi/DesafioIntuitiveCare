@@ -10,25 +10,25 @@
 
     <div class="row g-4 w-100 justify-content-center">
 
-      <div class="col-md-5 col-lg-4">
+      <div class="col-12 col-md-5 col-lg-4">
         <div class="card h-100 shadow border-0 hover-card">
           <div class="card-body text-center p-5">
-            <div class="mb-4 display-1">🔍</div>
+            <div class="mb-4 display-1" aria-hidden="true">🔍</div>
             <h3 class="card-title fw-bold text-success mb-3">Pesquisar</h3>
             <p class="card-text text-muted mb-4">
               Consulte a base de dados por Razão Social, Registro ANS ou CNPJ.
             </p>
-            <router-link to="/pesquisa" class="btn btn-success btn-lg w-100 fw-bold">
+            <router-link to="/operadoras" class="btn btn-success btn-lg w-100 fw-bold">
               Ir para Pesquisa
             </router-link>
           </div>
         </div>
       </div>
 
-      <div class="col-md-5 col-lg-4">
+      <div class="col-12 col-md-5 col-lg-4">
         <div class="card h-100 shadow border-0 hover-card">
           <div class="card-body text-center p-5">
-            <div class="mb-4 display-1">📊</div>
+            <div class="mb-4 display-1" aria-hidden="true">📊</div>
             <h3 class="card-title fw-bold text-primary mb-3">Dashboard</h3>
             <p class="card-text text-muted mb-4">
               Visualize gráficos de despesas, KPIs e análise por estado (UF).
@@ -45,7 +45,7 @@
 </template>
 
 <style scoped>
-/* Animação sutil ao passar o mouse */
+/* Animação original */
 .hover-card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
